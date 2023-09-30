@@ -9,4 +9,10 @@ model.png
 # keras tuner
 keras_tuner
 best_hps.txt
+model_kt.png
 ml_scheduler_model_kt.keras
+
+# autokeras
+ml_scheduler_model_at.keras
+model_ak.png
+autokeras

@@ -101,3 +101,7 @@ print('Best epoch: %d' % (best_epoch,))
 
 # Save model
 model.save('ml_scheduler_model_kt.keras')
+
+# Save model plot
+tf.keras.utils.plot_model(
+    model=model, show_shapes=True, to_file='model_kt.png')
