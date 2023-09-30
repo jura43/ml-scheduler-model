@@ -5,4 +5,8 @@ __pycache__/
 ml_scheduler_model.keras
 ct.save
 model.png
+
+# keras tuner
 keras_tuner
+best_hps.txt
+ml_scheduler_model_kt.keras
