@@ -3,3 +3,4 @@ scikit-learn
 pydot
 matplotlib
 numpy
+keras-tuner

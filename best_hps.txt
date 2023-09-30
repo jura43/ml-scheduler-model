@@ -1,0 +1,4 @@
+Number of layers: 8
+Number of neurons: 10
+Activation function: relu
+Learing rate of optimizer function: 0.0012232117875737862Loss function: mae

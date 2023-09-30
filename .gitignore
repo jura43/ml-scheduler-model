@@ -5,3 +5,4 @@ __pycache__/
 ml_scheduler_model.keras
 ct.save
 model.png
+keras_tuner

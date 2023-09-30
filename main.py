@@ -3,13 +3,32 @@ import tensorflow as tf
 from sklearn.compose import make_column_transformer
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
+import keras_tuner as kt
 import joblib
+
+
+def build_model(hp):
+    model = tf.keras.Sequential()
+    for i in range(hp.Int('num_layers', 1, 11)):
+        model.add(tf.keras.layers.Dense(units=hp.Int(
+            'units', min_value=10, max_value=100, step=10),
+            activation=hp.Choice("activation", ["relu", "selu"])))
+    model.add(tf.keras.layers.Dense(1, activation=hp.Choice(
+        "activation", ["relu", "none"])))
+    learning_rate = hp.Float("lr", min_value=1e-4,
+                             max_value=1e-0, sampling="log")
+    model.compile(loss=hp.Choice('loss', [
+                  "mse", "mae"]), optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['mse'])
+
+    return model
+
 
 data = pd.read_csv('ml_scheduler_dataset.csv')
 data.dropna(inplace=True)  # Remove records with missing values
 data = data[data['frontend_cpu_usage'] <= 1]  # Remove values grater than 1
 data = data[data['database_cpu_usage'] <= 1]
 data = data[data['backend_cpu_usage'] <= 1]
+
 # Remove outliers
 Q1 = data['response_time'].quantile(0.25)
 Q3 = data['response_time'].quantile(0.75)
@@ -39,21 +58,46 @@ X_train_normal = ct.transform(X_train)
 X_test_normal = ct.transform(X_test)
 joblib.dump(ct, "ct.save")
 
-tf.random.set_seed(42)
+build_model(kt.HyperParameters())
+tuner = kt.RandomSearch(
+    hypermodel=build_model,
+    objective="mse",
+    seed=42,
+    max_trials=1000,
+    executions_per_trial=1,
+    overwrite=True,
+    directory="keras_tuner",
+    project_name="ml_scheduler",
+)
 
-data_model = tf.keras.Sequential([
-    tf.keras.layers.Dense(10),
-    tf.keras.layers.Dense(1)
-])
+tuner.search(X_train_normal, y_train, epochs=10,
+             validation_data=(X_test_normal, y_test))
+tuner.search_space_summary()
 
-data_model.compile(loss=tf.keras.losses.mse,
-                   optimizer=tf.keras.optimizers.Adam(), metrics=['mse'])
+# Get optimal hyperparameters
+best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+with open('best_hps.txt', 'w') as f:  # Write results to file
+    print('Number of layers: ' + str(best_hps.get('num_layers')) + '\n')
+    f.write('Number of layers: ' + str(best_hps.get('num_layers')) + '\n')
+    print('Number of neurons: ' + str(best_hps.get('units')) + '\n')
+    f.write('Number of neurons: ' + str(best_hps.get('units')) + '\n')
+    print('Activation function: ' + best_hps.get('activation') + '\n')
+    f.write('Activation function: ' + best_hps.get('activation') + '\n')
+    print('Learing rate of optimizer function: ' +
+          str(best_hps.get('lr')) + '\n')
+    f.write('Learing rate of optimizer function: ' +
+            str(best_hps.get('lr')) + '\n')
+    print('Loss function: ' + best_hps.get('loss') + '\n')
+    f.write('Loss function: ' + best_hps.get('loss'))
 
-data_model.fit(X_train_normal, y_train, epochs=10)
-data_model.summary()
-data_model.save('ml_scheduler_model.keras')
-tf.keras.utils.plot_model(model=data_model, show_shapes=True)
+# Best model
+model = tuner.hypermodel.build(best_hps)
 
-# Evaluting model
-y_preds = data_model.predict(X_test_normal[:10])
-print(y_preds)
+# Finding optimal amount of epochs
+history = model.fit(X_train_normal, y_train, epochs=500)
+val_mse_per_epoch = history.history['mse']
+best_epoch = val_mse_per_epoch.index(min(val_mse_per_epoch)) + 1
+print('Best epoch: %d' % (best_epoch,))
+
+# Save model
+model.save('ml_scheduler_model_kt.keras')
