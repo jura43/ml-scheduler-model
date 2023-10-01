@@ -42,14 +42,17 @@ joblib.dump(ct, "ct.save")
 tf.random.set_seed(42)
 
 data_model = tf.keras.Sequential([
-    tf.keras.layers.Dense(10),
-    tf.keras.layers.Dense(1)
+    tf.keras.layers.Dense(80, activation='relu'),
+    tf.keras.layers.Dense(80, activation='relu'),
+    tf.keras.layers.Dense(80, activation='relu'),
+    tf.keras.layers.Dense(80, activation='relu'),
+    tf.keras.layers.Dense(1, activation='relu')
 ])
 
 data_model.compile(loss=tf.keras.losses.mse,
-                   optimizer=tf.keras.optimizers.Adam(), metrics=['mse'])
+                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.00038421108389847386), metrics=['mse'])
 
-data_model.fit(X_train_normal, y_train, epochs=10)
+data_model.fit(X_train_normal, y_train, epochs=5000)
 data_model.summary()
 data_model.save('ml_scheduler_model.keras')
 tf.keras.utils.plot_model(model=data_model, show_shapes=True)
